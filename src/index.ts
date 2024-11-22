@@ -104,7 +104,6 @@ async function handleConsent(request: Request, env: Env): Promise<Response> {
 			);
 		}
 
-		// Validate required fields
 		const requiredFields: (keyof ConsentRecord)[] = [
 			'cart_token',
 			'customer_email',
