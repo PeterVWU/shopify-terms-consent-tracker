@@ -1,0 +1,223 @@
+{% comment %}
+Add this to your cart template (sections/cart.liquid or templates/cart.liquid)
+{% endcomment %}
+
+{%- style -%}
+.terms-consent-container {
+margin: 20px 0;
+padding: 15px;
+border: 1px solid #e8e8e8;
+border-radius: 4px;
+background-color: #f9f9f9;
+}
+
+.terms-checkbox-wrapper {
+display: flex;
+align-items: flex-start;
+gap: 10px;
+}
+
+.terms-checkbox {
+margin-top: 4px;
+}
+
+.terms-error {
+color: #dc2626;
+font-size: 0.875rem;
+margin-top: 4px;
+display: none;
+}
+
+.terms-error.show {
+display: block;
+}
+
+/* Disable pointer events while processing */
+.checkout-disabled {
+pointer-events: none !important;
+opacity: 0.7;
+}
+{%- endstyle -%}
+
+<div class="terms-consent-container">
+    <div class="terms-checkbox-wrapper">
+        <input type="checkbox" id="terms-checkbox" class="terms-checkbox" required {% if cart.attributes.terms_accepted
+            %} checked {% endif %}>
+        <label for="terms-checkbox" class="text-sm text-gray-700">
+            I agree to <a href="pages/terms-and-policies" target="_blank">Terms & conditions</a>
+            and <a href="/pages/warranty-returns-policy" target="_blank">Return policy</a>
+        </label>
+    </div>
+    <div id="terms-error" class="terms-error">
+        Please accept the Terms and Conditions to continue
+    </div>
+</div>
+
+<script>
+    (function () {
+        console.log('load script')
+        const WORKER_URL = 'https://shopify-terms-consent-tracker.info-ba2.workers';
+        let isSubmitting = false;
+
+        function initTermsConsent() {
+            console.log('initTermsConsent')
+            const termsCheckbox = document.querySelector('#terms-checkbox');
+            const termsError = document.querySelector('#terms-error');
+            const checkoutButtons = document.querySelectorAll(
+                'button[name="checkout"]'
+            );
+
+            if (!termsCheckbox || !termsError || checkoutButtons.length === 0) {
+                console.error('Required elements not found for terms consent');
+                return;
+            }
+
+            async function recordConsent() {
+                try {
+                    const cartResponse = await fetch('/cart.js');
+                    const cart = await cartResponse.json();
+
+                    // Get customer email if logged in, otherwise null
+                    const customerEmail = {{ customer.email | json
+                }} || null
+
+            console.log('customer', customerEmail)
+            const response = await fetch(`${WORKER_URL}/record-consent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    cart_token: cart.token,
+                    customer_email: customerEmail,
+                    ip_address: {{ request.ip | json }},
+                terms_version: '1.0',
+                timestamp: new Date().toISOString(),
+                shop_domain: window.Shopify.shop
+                        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to record consent');
+    }
+
+    return await response.json();
+    } catch (error) {
+        console.error('Failed to record consent:', error);
+        throw error;
+    }
+            }
+
+
+    function disableCheckoutButtons() {
+        checkoutButtons.forEach(button => {
+            button.classList.add('checkout-disabled');
+            if (button.tagName === 'BUTTON' || button.tagName === 'INPUT') {
+                button.disabled = true;
+            }
+            button.dataset.originalText = button.innerText;
+            button.innerText = 'Processing...';
+        });
+    }
+
+    function enableCheckoutButtons() {
+        checkoutButtons.forEach(button => {
+            button.classList.remove('checkout-disabled');
+            if (button.tagName === 'BUTTON' || button.tagName === 'INPUT') {
+                button.disabled = false;
+            }
+            if (button.dataset.originalText) {
+                button.innerText = button.dataset.originalText;
+            }
+        });
+    }
+
+    async function handleCheckout(event) {
+        // Always prevent default first
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (isSubmitting) return false;
+
+        if (!termsCheckbox.checked) {
+            termsError.classList.add('show');
+            termsCheckbox.focus();
+            return false;
+        }
+
+        isSubmitting = true;
+        termsError.classList.remove('show');
+        disableCheckoutButtons();
+
+        try {
+            await recordConsent();
+            // Redirect to checkout
+            window.location.href = '/checkout';
+        } catch (error) {
+            console.error('Error during checkout:', error);
+            alert('There was an error processing your request. Please try again.');
+            enableCheckoutButtons();
+            isSubmitting = false;
+        }
+
+        return false;
+    }
+
+    // Remove existing click listeners first
+    checkoutButtons.forEach(button => {
+        console.log('replaceWith button', button)
+        button.replaceWith(button.cloneNode(true));
+    });
+
+    // Add our listeners with capture and highest priority
+    document.addEventListener('click', function (event) {
+        const target = event.target;
+        console.log('checkout clicked')
+        const checkoutButton = target.closest(
+            'button[name="checkout"], input[name="checkout"], a[href="/checkout"], [href="/checkout"]'
+        );
+
+        if (checkoutButton) {
+            handleCheckout(event);
+        }
+    }, true); // Use capture phase
+
+    // Handle form submissions
+    document.addEventListener('submit', function (event) {
+        const form = event.target;
+        if (form.action && form.action.includes('/cart') && form.querySelector('[name="checkout"]')) {
+            handleCheckout(event);
+        }
+    }, true); // Use capture phase
+
+    // Clear error when checkbox is checked
+    termsCheckbox.addEventListener('change', function () {
+        if (this.checked) {
+            termsError.classList.remove('show');
+        }
+    });
+
+    // Also intercept Shopify's default /cart/add.js and /cart/update.js endpoints
+    const originalFetch = window.fetch;
+    window.fetch = function (input, init) {
+        if (typeof input === 'string' &&
+            (input.includes('/cart/add') || input.includes('/cart/update')) &&
+            !termsCheckbox.checked) {
+            termsError.classList.add('show');
+            termsCheckbox.focus();
+            return Promise.reject(new Error('Terms not accepted'));
+        }
+        return originalFetch.apply(this, arguments);
+    };
+        }
+
+    // Initialize as soon as possible
+    if (document.readyState === 'loading') {
+        console.log('loading')
+        document.addEventListener('DOMContentLoaded', initTermsConsent);
+    } else {
+        console.log('done loading')
+        initTermsConsent();
+    }
+    }) ();
+</script>

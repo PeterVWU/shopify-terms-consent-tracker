@@ -95,7 +95,7 @@ export default {
 async function handleConsent(request: Request, env: Env): Promise<Response> {
 	try {
 		const data: ConsentRecord = await request.json();
-		const shop = request.headers.get("X-Shopify-Shop-Domain");
+		const shop = data.shop_domain
 
 		if (!shop) {
 			return new Response(
