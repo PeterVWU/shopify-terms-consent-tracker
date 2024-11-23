@@ -106,7 +106,6 @@ async function handleConsent(request: Request, env: Env): Promise<Response> {
 
 		const requiredFields: (keyof ConsentRecord)[] = [
 			'cart_token',
-			'customer_email',
 			'terms_version',
 			'timestamp'
 		];
