@@ -179,14 +179,15 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 			`)
 			.bind(orderData.cart_token, shop)
 			.first();
+		console.log("handleOrderWebhook consentRecord", consentRecord)
 
 		if (consentRecord) {
-			console.log("handleOrderWebhook consentRecord", consentRecord)
+			console.log("handleOrderWebhook has consentRecord", consentRecord)
 			// Add order note via Shopify API
 			await addOrderNote(
 				shop,
 				orderData.id,
-				`Terms and Conditions v${consentRecord.terms_version} accepted at ${consentRecord.accepted_at}`,
+				`Terms and Conditions accepted at ${consentRecord.accepted_at}`,
 				orderData.order_number,
 				env
 			);
@@ -302,7 +303,7 @@ async function addOrderNote(
 		mutation orderAddMetafields($input: [MetafieldsSetInput!]!) {
 		  ordersUpdate(input: {
 			id: "gid://shopify/Order/${orderId}",
-			metafields: $input
+			note: $input
 		  }) {
 			userErrors {
 			  field
@@ -313,12 +314,7 @@ async function addOrderNote(
 	  `;
 
 		const variables = {
-			input: [{
-				namespace: "terms_and_conditions",
-				key: "acceptance",
-				type: "single_line_text_field",
-				value: note
-			}]
+			input: note
 		};
 
 		// Call Shopify GraphQL API
