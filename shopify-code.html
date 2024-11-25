@@ -55,17 +55,16 @@ opacity: 0.7;
 
 <script>
     (function () {
-        console.log('load script')
-        const WORKER_URL = 'shopify-terms-consent-tracker.info-ba2.workers.dev';
+        const WORKER_URL = 'https://shopify-terms-consent-tracker.info-ba2.workers.dev';
         let isSubmitting = false;
 
         function initTermsConsent() {
-            console.log('initTermsConsent')
             const termsCheckbox = document.querySelector('#terms-checkbox');
             const termsError = document.querySelector('#terms-error');
             const checkoutButtons = document.querySelectorAll(
                 'button[name="checkout"]'
             );
+            console.log('checkoutButtons', checkoutButtons)
 
             if (!termsCheckbox || !termsError || checkoutButtons.length === 0) {
                 console.error('Required elements not found for terms consent');
@@ -76,12 +75,8 @@ opacity: 0.7;
                 try {
                     const cartResponse = await fetch('/cart.js');
                     const cart = await cartResponse.json();
-
-                    // Get customer email if logged in, otherwise null
                     const customerEmail = {{ customer.email | json
                 }} || null
-
-            console.log('customer', customerEmail)
             const response = await fetch(`${WORKER_URL}/record-consent`, {
                 method: 'POST',
                 headers: {
@@ -102,17 +97,11 @@ opacity: 0.7;
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Consent API Error:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText
-        });
-        throw new Error(`Failed to record consent: ${response.status} ${errorText}`);
+        throw new Error('Failed to record consent');
     }
 
     return await response.json();
-    } catch (error) {
+                } catch (error) {
         console.error('Failed to record consent:', error);
         throw error;
     }
@@ -173,16 +162,16 @@ opacity: 0.7;
         return false;
     }
 
-    // Remove existing click listeners first
-    checkoutButtons.forEach(button => {
-        console.log('replaceWith button', button)
-        button.replaceWith(button.cloneNode(true));
-    });
+    try {
+        // Remove existing click listeners first
+        checkoutButtons.forEach(button => {
+            button.replaceWith(button.cloneNode(true));
+        });
+    } catch (error) { console.log('error', error) }
 
     // Add our listeners with capture and highest priority
     document.addEventListener('click', function (event) {
         const target = event.target;
-        console.log('checkout clicked')
         const checkoutButton = target.closest(
             'button[name="checkout"], input[name="checkout"], a[href="/checkout"], [href="/checkout"]'
         );
@@ -220,13 +209,12 @@ opacity: 0.7;
         return originalFetch.apply(this, arguments);
     };
         }
+    const customerEmail = {{ customer.email | json }} || null
 
-    // Initialize as soon as possible
+    //Initialize as soon as possible
     if (document.readyState === 'loading') {
-        console.log('loading')
         document.addEventListener('DOMContentLoaded', initTermsConsent);
     } else {
-        console.log('done loading')
         initTermsConsent();
     }
     }) ();

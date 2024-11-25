@@ -161,14 +161,14 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 		if (!shop) {
 			return new Response("Missing shop domain", { status: 401 });
 		}
-
+		console.log('handleOrderWebhook shop', shop)
 		// Verify webhook with shop-specific secret
 		if (!await verifyWebhook(request.clone(), shop, env)) {
 			return new Response("Invalid webhook signature", { status: 401 });
 		}
 
 		const orderData: ShopifyOrderWebhook = await request.json();
-
+		console.log("handleOrderWebhook cart_token", orderData.cart_token)
 		// Find matching consent record
 		const consentRecord = await env.DB.prepare(`
 				SELECT * FROM consent_records 
@@ -181,6 +181,7 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 			.first();
 
 		if (consentRecord) {
+			console.log("handleOrderWebhook consentRecord", consentRecord)
 			// Add order note via Shopify API
 			await addOrderNote(
 				shop,
@@ -203,6 +204,8 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 				)
 				.run();
 		}
+
+		console.log("handleOrderWebhook before return ok", consentRecord)
 
 		return new Response("OK");
 	} catch (error) {
