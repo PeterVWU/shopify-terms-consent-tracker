@@ -132,7 +132,7 @@ async function handleConsent(request: Request, env: Env): Promise<Response> {
 	  `);
 
 		await stmt.bind(
-			data.cart_token,
+			data.cart_token.split("?key=")[0],
 			data.customer_email,
 			data.ip_address,
 			data.terms_version,
@@ -163,9 +163,9 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 		}
 		console.log('handleOrderWebhook shop', shop)
 		// Verify webhook with shop-specific secret
-		if (!await verifyWebhook(request.clone(), shop, env)) {
-			return new Response("Invalid webhook signature", { status: 401 });
-		}
+		// if (!await verifyWebhook(request.clone(), shop, env)) {
+		// 	return new Response("Invalid webhook signature", { status: 401 });
+		// }
 
 		const orderData: ShopifyOrderWebhook = await request.json();
 		console.log("handleOrderWebhook cart_token", orderData.cart_token)
