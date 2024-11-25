@@ -216,11 +216,13 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 
 
 async function verifyWebhook(request: Request, shop: string, env: Env): Promise<boolean> {
+	console.log('verifyWebhook')
 	const hmac = request.headers.get('X-Shopify-Hmac-Sha256');
 	if (!hmac) return false;
 
 	// Get the webhook secret for this specific shop
 	const secretKey = `SHOP_SECRET_${shop.replace(/[.-]/g, '_').toUpperCase()}`;
+	console.log('verifyWebhook secretKey', secretKey)
 	const secret = env[secretKey];
 
 	if (!secret) {
@@ -231,6 +233,7 @@ async function verifyWebhook(request: Request, shop: string, env: Env): Promise<
 	// Get the raw body
 	const body = await request.text();
 
+	console.log('verifyWebhook body', body)
 	// Convert secret to Uint8Array
 	const encoder = new TextEncoder();
 	const keyData = encoder.encode(secret as string);
@@ -244,10 +247,12 @@ async function verifyWebhook(request: Request, shop: string, env: Env): Promise<
 		false,
 		['verify']
 	);
+	console.log('verifyWebhook key', key)
 
 	// Decode the base64 hmac from the header
 	const signatureBuffer = base64ToUint8Array(hmac);
 
+	console.log('verifyWebhook signatureBuffer', signatureBuffer)
 	// Verify the signature
 	return await crypto.subtle.verify(
 		'HMAC',
