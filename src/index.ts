@@ -300,10 +300,10 @@ async function addOrderNote(
 
 		// GraphQL mutation to add order note
 		const mutation = `
-		mutation orderAddMetafields($input: [MetafieldsSetInput!]!) {
+		mutation orderAddMetafields {
 		  ordersUpdate(input: {
 			id: "gid://shopify/Order/${orderId}",
-			note: $input
+			note: ${note}
 		  }) {
 			userErrors {
 			  field
@@ -313,10 +313,6 @@ async function addOrderNote(
 		}
 	  `;
 
-		const variables = {
-			input: note
-		};
-
 		// Call Shopify GraphQL API
 		const response = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
 			method: 'POST',
@@ -325,8 +321,7 @@ async function addOrderNote(
 				'X-Shopify-Access-Token': accessToken as string,
 			},
 			body: JSON.stringify({
-				query: mutation,
-				variables: variables
+				query: mutation
 			})
 		});
 
