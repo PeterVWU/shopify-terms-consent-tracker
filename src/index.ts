@@ -187,7 +187,7 @@ async function handleOrderWebhook(request: Request, env: Env): Promise<Response>
 			await addOrderNote(
 				shop,
 				orderData.id,
-				`Terms and Conditions accepted at ${consentRecord.accepted_at}`,
+				`Terms and Conditions accepted at ${consentRecord.accepted_at} by customer`,
 				orderData.order_number,
 				env
 			);
@@ -301,8 +301,8 @@ async function addOrderNote(
 
 		// GraphQL mutation to add order note
 		const mutation = `
-		mutation orderAddMetafields {
-		  ordersUpdate(input: {
+		mutation OrderUpdate {
+		  orderUpdate(input: {
 			id: "gid://shopify/Order/${orderId}",
 			note: "${note}"
 		  }) {
