@@ -289,6 +289,7 @@ async function addOrderNote(
 	env: Env
 ): Promise<void> {
 	try {
+		console.log(`addOrderNote start ${orderNumber}`);
 		// Convert shop domain to environment variable name
 		// e.g., 'my-store.myshopify.com' becomes 'SHOP_TOKEN_MY_STORE_MYSHOPIFY_COM'
 		const tokenKey = `SHOP_TOKEN_${shop.replace(/[.-]/g, '_').toUpperCase()}`;
@@ -313,6 +314,7 @@ async function addOrderNote(
 		}
 	  `;
 
+		console.log(`addOrderNote before request: ${mutation}`);
 		// Call Shopify GraphQL API
 		const response = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
 			method: 'POST',
