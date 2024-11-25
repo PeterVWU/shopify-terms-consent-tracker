@@ -303,7 +303,7 @@ async function addOrderNote(
 		mutation orderAddMetafields {
 		  ordersUpdate(input: {
 			id: "gid://shopify/Order/${orderId}",
-			note: ${note}
+			note: "${note}"
 		  }) {
 			userErrors {
 			  field
